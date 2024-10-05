@@ -3,9 +3,9 @@ from astropy.coordinates import SkyCoord
 from astroquery.gaia import Gaia
 from pprint import pprint
 
-def Get_Stars():
+def Get_Stars(amount = 1000):
     query = f"""
-    SELECT TOP 100
+    SELECT TOP {amount}
         source_id, ra, dec,
         phot_g_mean_mag as g_mag
     FROM gaiadr3.gaia_source
@@ -30,5 +30,5 @@ def Get_Stars():
 
 if __name__=="__main__":
     output = Get_Stars()
-    for i in output:
-        print(i)
+    for i in range(1000):
+        print(next(output))
