@@ -2,9 +2,8 @@ import glfw
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import pyrr
-from TextureLoader import load_texture
 import numpy as np
-
+import time  # Added to track time
 from camera import Camera
 
 cam = Camera()
@@ -12,7 +11,6 @@ WIDTH, HEIGHT = 1280, 720
 lastX, lastY = WIDTH / 2, HEIGHT / 2
 first_mouse = True
 left, right, forward, backward = False, False, False, False
-
 
 # the keyboard input callback
 def key_input_clb(window, key, scancode, action, mode):
@@ -37,7 +35,6 @@ def key_input_clb(window, key, scancode, action, mode):
     elif key == glfw.KEY_D and action == glfw.RELEASE:
         right = False
 
-
 # do the movement, call this function in the main loop
 def do_movement():
     if left:
@@ -48,7 +45,6 @@ def do_movement():
         cam.process_keyboard("FORWARD", 0.05)
     if backward:
         cam.process_keyboard("BACKWARD", 0.05)
-
 
 # the mouse position callback function
 def mouse_look_clb(window, xpos, ypos):
@@ -67,44 +63,65 @@ def mouse_look_clb(window, xpos, ypos):
 
     cam.process_mouse_movement(xoffset, yoffset)
 
+# Sphere generation using triangles
+def generate_sphere(radius, sectorCount, stackCount):
+    vertices = []
+    indices = []
+    for i in range(stackCount + 1):
+        stack_angle = np.pi / 2 - i * np.pi / stackCount
+        xy = radius * np.cos(stack_angle)
+        z = radius * np.sin(stack_angle)
+
+        for j in range(sectorCount + 1):
+            sector_angle = j * 2 * np.pi / sectorCount
+            x = xy * np.cos(sector_angle)
+            y = xy * np.sin(sector_angle)
+            vertices.extend([x, y, z])
+
+    # Generate indices for the triangles
+    for i in range(stackCount):
+        for j in range(sectorCount):
+            first = i * (sectorCount + 1) + j
+            second = first + sectorCount + 1
+
+            indices.append(first)
+            indices.append(second)
+            indices.append(first + 1)
+
+            indices.append(second)
+            indices.append(second + 1)
+            indices.append(first + 1)
+
+    return np.array(vertices, dtype=np.float32), np.array(indices, dtype=np.uint32)
 
 vertex_src = """
 # version 330
 
 layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec2 a_texture;
-layout(location = 2) in vec3 a_offset;
+layout(location = 1) in vec3 a_offset;
 
 uniform mat4 model;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 move;
 
-out vec2 v_texture;
-
 void main()
 {
     vec3 final_pos = a_position + a_offset;
     gl_Position =  projection * view * move * model * vec4(final_pos, 1.0f);
-    v_texture = a_texture;
 }
 """
 
 fragment_src = """
 # version 330
 
-in vec2 v_texture;
-
 out vec4 out_color;
-
-uniform sampler2D s_texture;
 
 void main()
 {
-    out_color = texture(s_texture, v_texture);
+    out_color = vec4(1.0, 1.0, 1.0, 1.0);  // Fully white
 }
 """
-
 
 # the window resize callback function
 def window_resize_clb(window, width, height):
@@ -112,13 +129,12 @@ def window_resize_clb(window, width, height):
     projection = pyrr.matrix44.create_perspective_projection_matrix(45, width / height, 0.1, 100)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
 
-
 # initializing glfw library
 if not glfw.init():
     raise Exception("glfw can not be initialized!")
 
 # creating the window
-window = glfw.create_window(WIDTH, HEIGHT, "My OpenGL window", None, None)
+window = glfw.create_window(WIDTH, HEIGHT, "White Spheres", None, None)
 
 # check if window was created
 if not window:
@@ -140,107 +156,56 @@ glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 # make the context current
 glfw.make_context_current(window)
 
+# Generate sphere data (with triangles)
+sphere_vertices, sphere_indices = generate_sphere(0.5, 20, 20)
 
-#              positions        texture_coords
-cube_buffer = [-0.5, -0.5,  0.5, 0.0, 0.0,
-             0.5, -0.5,  0.5, 1.0, 0.0,
-             0.5,  0.5,  0.5, 1.0, 1.0,
-            -0.5,  0.5,  0.5, 0.0, 1.0,
-
-            -0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5, -0.5, -0.5, 1.0, 0.0,
-             0.5,  0.5, -0.5, 1.0, 1.0,
-            -0.5,  0.5, -0.5, 0.0, 1.0,
-
-             0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5,  0.5, -0.5, 1.0, 0.0,
-             0.5,  0.5,  0.5, 1.0, 1.0,
-             0.5, -0.5,  0.5, 0.0, 1.0,
-
-            -0.5,  0.5, -0.5, 0.0, 0.0,
-            -0.5, -0.5, -0.5, 1.0, 0.0,
-            -0.5, -0.5,  0.5, 1.0, 1.0,
-            -0.5,  0.5,  0.5, 0.0, 1.0,
-
-            -0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5, -0.5, -0.5, 1.0, 0.0,
-             0.5, -0.5,  0.5, 1.0, 1.0,
-            -0.5, -0.5,  0.5, 0.0, 1.0,
-
-             0.5,  0.5, -0.5, 0.0, 0.0,
-            -0.5,  0.5, -0.5, 1.0, 0.0,
-            -0.5,  0.5,  0.5, 1.0, 1.0,
-             0.5,  0.5,  0.5, 0.0, 1.0]
-
-cube_buffer = np.array(cube_buffer, dtype=np.float32)
-
-cube_indices = [ 0,  1,  2,  2,  3,  0,
-                 4,  5,  6,  6,  7,  4,
-                 8,  9, 10, 10, 11,  8,
-                12, 13, 14, 14, 15, 12,
-                16, 17, 18, 18, 19, 16,
-                20, 21, 22, 22, 23, 20]
-
-cube_indices = np.array(cube_indices, dtype=np.uint32)
-
+# Shader setup
 shader = compileProgram(compileShader(vertex_src, GL_VERTEX_SHADER), compileShader(fragment_src, GL_FRAGMENT_SHADER))
 
-# VAO, VBO and EBO
+# VAO, VBO, EBO
 VAO = glGenVertexArrays(1)
 VBO = glGenBuffers(1)
 EBO = glGenBuffers(1)
 
-# cube VAO
 glBindVertexArray(VAO)
-# cube Vertex Buffer Object
+
 glBindBuffer(GL_ARRAY_BUFFER, VBO)
-glBufferData(GL_ARRAY_BUFFER, cube_buffer.nbytes, cube_buffer, GL_STATIC_DRAW)
-# cube Element Buffer Object
+glBufferData(GL_ARRAY_BUFFER, sphere_vertices.nbytes, sphere_vertices, GL_STATIC_DRAW)
+
 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube_indices.nbytes, cube_indices, GL_STATIC_DRAW)
+glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere_indices.nbytes, sphere_indices, GL_STATIC_DRAW)
 
-# cube vertices
+# Setup vertex attribute pointers
 glEnableVertexAttribArray(0)
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube_buffer.itemsize * 5, ctypes.c_void_p(0))
-# cube textures
-glEnableVertexAttribArray(1)
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, cube_buffer.itemsize * 5, ctypes.c_void_p(12))
-
-textures = glGenTextures(1)
-load_texture("textures/crate.jpg", textures)
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 # instance VBO
 instance_array = []
-offset = 1
+offset = 5
 
-for z in range(0, 100, 2):
-    for y in range(0, 100, 2):
-        for x in range(0, 100, 2):
-            translation = pyrr.Vector3([0.0, 0.0, 0.0])
-            translation.x = x + offset
-            translation.y = y + offset
-            translation.z = z + offset
+for z in range(0, 40, 2):
+    for y in range(0, 40, 2):
+        for x in range(0, 40, 2):
+            translation = pyrr.Vector3([x + offset, y + offset, z - offset])
             instance_array.append(translation)
+            offset+=5
 
-len_of_instance_array = len(instance_array) # do this before you flatten the array
 instance_array = np.array(instance_array, np.float32).flatten()
 
 instanceVBO = glGenBuffers(1)
 glBindBuffer(GL_ARRAY_BUFFER, instanceVBO)
 glBufferData(GL_ARRAY_BUFFER, instance_array.nbytes, instance_array, GL_STATIC_DRAW)
 
-glEnableVertexAttribArray(2)
-glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
-glVertexAttribDivisor(2, 1) # 1 means, every instance will have it's own translate
+glEnableVertexAttribArray(1)
+glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
+glVertexAttribDivisor(1, 1)
 
 glUseProgram(shader)
 glClearColor(0, 0.1, 0.1, 1)
 glEnable(GL_DEPTH_TEST)
-glEnable(GL_BLEND)
-glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 projection = pyrr.matrix44.create_perspective_projection_matrix(45, WIDTH / HEIGHT, 0.1, 100000000)
-cube_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([-50.0, -50.0, -200.0]))
+model = pyrr.matrix44.create_from_translation(pyrr.Vector3([-50.0, -50.0, -200.0]))
 
 model_loc = glGetUniformLocation(shader, "model")
 proj_loc = glGetUniformLocation(shader, "projection")
@@ -248,25 +213,39 @@ view_loc = glGetUniformLocation(shader, "view")
 move_loc = glGetUniformLocation(shader, "move")
 
 glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-glUniformMatrix4fv(model_loc, 1, GL_FALSE, cube_pos)
+glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
 
+# FPS tracking variables
+last_time = time.time()  # Time of the last FPS update
+frame_count = 0  # Frame count
 
-# the main application loop
+# Main loop
 while not glfw.window_should_close(window):
     glfw.poll_events()
-    # do_movement()
+    do_movement()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    move = pyrr.matrix44.create_from_translation(pyrr.Vector3([0, 0, glfw.get_time()*8]))
+    move = pyrr.matrix44.create_from_translation(pyrr.Vector3([0, 0, glfw.get_time() * 8]))
     glUniformMatrix4fv(move_loc, 1, GL_FALSE, move)
 
     view = cam.get_view_matrix()
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
 
-    glDrawElementsInstanced(GL_TRIANGLES, len(cube_indices), GL_UNSIGNED_INT, None, len_of_instance_array)
+    # Draw filled spheres using GL_TRIANGLES
+    glDrawElementsInstanced(GL_TRIANGLES, len(sphere_indices), GL_UNSIGNED_INT, None, len(instance_array) // 3)
+
+    glClearColor(0.0, 0.0, 0.04, 1.0)
 
     glfw.swap_buffers(window)
 
-# terminate glfw, free up allocated resources
+    # Calculate FPS
+    current_time = time.time()
+    frame_count += 1
+    if current_time - last_time >= 1.0:  # If one second has passed
+        fps = frame_count / (current_time - last_time)
+        glfw.set_window_title(window, f"White Spheres - FPS: {fps:.2f}")
+        frame_count = 0
+        last_time = current_time
+
 glfw.terminate()
