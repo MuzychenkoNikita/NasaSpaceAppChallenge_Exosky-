@@ -1,14 +1,14 @@
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astroquery.gaia import Gaia
-from pprint import pprint
+import numpy as np
 
 def Get_Stars(amount = 1000):
     query = f"""
     SELECT TOP {amount}
-        source_id, ra, dec,
-        phot_g_mean_mag as g_mag
+        source_id, ra, dec, phot_g_mean_mag, parallax
     FROM gaiadr3.gaia_source
+    WHERE parallax_error / parallax < 0.2
     ORDER BY phot_g_mean_mag ASC
     """
 
@@ -21,7 +21,8 @@ def Get_Stars(amount = 1000):
             'source_id': row[0],
             'ra': row[1],
             'dec': row[2],
-            'g_mag': row[3]
+            'g_mag': row[3],
+            'dist': np.float32((1000/row[4])*3.26156)
             })
 
     for i in output:
