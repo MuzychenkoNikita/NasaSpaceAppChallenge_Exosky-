@@ -20,13 +20,12 @@ def Get_Stars(amount = 1000):
     job = Gaia.launch_job(query)
     r = job.get_results()
 
-    output = []
     for row in r:
         distance = np.float32((1000/row[4])*3.26156)
-        azimuth = row[1]*(math.pi/180)
-        elevation = row[2]*(math.pi/180)
+        azimuth = math.radians(row[1])
+        elevation = math.radians(row[2])
 
-        output.append({
+        yield {
             'source_id': row[0],
             'x': np.float64(distance*math.cos(elevation)*math.cos(azimuth)),
             'y': np.float64(distance*math.cos(elevation)*math.sin(azimuth)),
@@ -34,11 +33,9 @@ def Get_Stars(amount = 1000):
             'g_mag': row[3],
             'dist': distance,
             'rad': row[4] * 7.35355*(10**-8)
-            })
+            }
 
-    for i in output:
-        yield i
-    raise Exception("Out of stars :P")
+    raise StopIteration("Out of stars :P")
 
 if __name__=="__main__":
     output = Get_Stars()
