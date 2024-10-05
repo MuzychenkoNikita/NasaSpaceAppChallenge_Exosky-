@@ -1,0 +1,6 @@
+#!X:\VSCode Rep\Learn-OpenGL-in-python\exosky\Scripts\python.exe
+
+import sys
+from pyr.shell import main
+
+sys.exit(main())
