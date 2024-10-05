@@ -3,6 +3,7 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 import pyrr
 from TextureLoader import load_texture
+from ObjLoader import ObjLoader
 import numpy as np
 
 from camera import Camera
@@ -141,47 +142,7 @@ glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 glfw.make_context_current(window)
 
 
-#              positions        texture_coords
-cube_buffer = [-0.5, -0.5,  0.5, 0.0, 0.0,
-             0.5, -0.5,  0.5, 1.0, 0.0,
-             0.5,  0.5,  0.5, 1.0, 1.0,
-            -0.5,  0.5,  0.5, 0.0, 1.0,
-
-            -0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5, -0.5, -0.5, 1.0, 0.0,
-             0.5,  0.5, -0.5, 1.0, 1.0,
-            -0.5,  0.5, -0.5, 0.0, 1.0,
-
-             0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5,  0.5, -0.5, 1.0, 0.0,
-             0.5,  0.5,  0.5, 1.0, 1.0,
-             0.5, -0.5,  0.5, 0.0, 1.0,
-
-            -0.5,  0.5, -0.5, 0.0, 0.0,
-            -0.5, -0.5, -0.5, 1.0, 0.0,
-            -0.5, -0.5,  0.5, 1.0, 1.0,
-            -0.5,  0.5,  0.5, 0.0, 1.0,
-
-            -0.5, -0.5, -0.5, 0.0, 0.0,
-             0.5, -0.5, -0.5, 1.0, 0.0,
-             0.5, -0.5,  0.5, 1.0, 1.0,
-            -0.5, -0.5,  0.5, 0.0, 1.0,
-
-             0.5,  0.5, -0.5, 0.0, 0.0,
-            -0.5,  0.5, -0.5, 1.0, 0.0,
-            -0.5,  0.5,  0.5, 1.0, 1.0,
-             0.5,  0.5,  0.5, 0.0, 1.0]
-
-cube_buffer = np.array(cube_buffer, dtype=np.float32)
-
-cube_indices = [ 0,  1,  2,  2,  3,  0,
-                 4,  5,  6,  6,  7,  4,
-                 8,  9, 10, 10, 11,  8,
-                12, 13, 14, 14, 15, 12,
-                16, 17, 18, 18, 19, 16,
-                20, 21, 22, 22, 23, 20]
-
-cube_indices = np.array(cube_indices, dtype=np.uint32)
+cube_indices, cube_buffer = ObjLoader.load_model("meshes/sphere.obj")
 
 shader = compileProgram(compileShader(vertex_src, GL_VERTEX_SHADER), compileShader(fragment_src, GL_FRAGMENT_SHADER))
 
@@ -207,7 +168,7 @@ glEnableVertexAttribArray(1)
 glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, cube_buffer.itemsize * 5, ctypes.c_void_p(12))
 
 textures = glGenTextures(1)
-load_texture("textures/crate.jpg", textures)
+load_texture("meshes/sphere.jpg", textures[0])
 
 # instance VBO
 instance_array = []
