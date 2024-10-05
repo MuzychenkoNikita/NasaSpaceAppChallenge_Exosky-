@@ -6,7 +6,7 @@ import numpy as np
 
 def Get_Exoplanets(amount = 1000):
     r = NasaExoplanetArchive.query_criteria(
-        table="pscomppars", select=f"TOP {amount} pl_name, rastr, decstr, sy_dist", order="sy_dist ASC")
+        table="pscomppars", select=f"TOP {amount} pl_name, rastr, decstr, sy_dist", order="sy_dist ASC", where="sy_dist IS NOT NaN")
 
     output = []
     for row in r:
