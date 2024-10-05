@@ -1,5 +1,3 @@
-import astropy.units as u
-from astropy.coordinates import SkyCoord
 from astroquery.ipac.nexsci.nasa_exoplanet_archive import NasaExoplanetArchive
 import math
 import numpy as np
