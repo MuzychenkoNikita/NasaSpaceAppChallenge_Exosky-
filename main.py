@@ -160,7 +160,7 @@ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 
 # Process star positions
-number_of_stars = 4000 # Fetch 4000 visible stars
+number_of_stars = 10000 # Fetch 4000 visible stars
 
 # Process star positions
 instance_array = []
