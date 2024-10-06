@@ -5,7 +5,7 @@ import pyrr
 import numpy as np
 import time
 from camera import Camera
-from Stars_Import import Get_Stars  # Import star data from the Hipparcos catalog (filtered and processed)
+from Stars_Import import Get_Stars
 
 # Initialize camera
 cam = Camera()
@@ -160,20 +160,19 @@ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 
 # Process star positions
-stars_output = Get_Stars(amount=6000)  # Fetch 4000 visible stars
-
-print(f"Total number of stars fetched: {len(stars_output)}")  # Print star count
+number_of_stars = 10000 # Fetch 4000 visible stars
 
 # Process star positions
 instance_array = []
 scale_factor = 1  # Base scale for positioning
 
-for star in stars_output:
-    brightness = star['Vmag']
-    # Scale size inversely based on brightness (brighter stars are larger)
-    size = max(0.01, 0.1 - (brightness / 1))  # Adjust size based on Vmag, ensuring it doesn't go below a minimum size
+for star in Get_Stars(amount=number_of_stars):
+    brightness = star['g_mag']
+    size = star['rad']
     translation = pyrr.Vector3([star['x'] * scale_factor, star['y'] * scale_factor, star['z'] * scale_factor])
     instance_array.append((translation, size))  # Store translation and size as a tuple
+
+print(f"Total number of stars fetched: {len(instance_array)}")
 
 # Convert to a NumPy array for use in OpenGL
 instance_array = np.array(instance_array, dtype=[('position', np.float32, 3), ('size', np.float32)])

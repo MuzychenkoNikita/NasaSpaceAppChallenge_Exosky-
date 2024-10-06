@@ -1,46 +1,45 @@
-import pandas as pd
+from astroquery.gaia import Gaia
 import numpy as np
-from astroquery.vizier import Vizier
+import math
 
-def Get_Stars(amount=4000, magnitude_limit="<6.0"):
-    # Set up the Vizier catalog to query the Hipparcos catalog for stars with Vmag
-    vizier = Vizier(columns=["*", "RAhms", "DEdms", "Vmag", "Plx"], row_limit=-1)  # No limit
-    hipparcos_catalog = "I/239/hip_main"
+def Get_Stars(amount = 1000):
+    query = f"""
+    SELECT TOP {amount}
+        gaiadr3.gaia_source.source_id, 
+        gaiadr3.gaia_source.ra, 
+        gaiadr3.gaia_source.dec, 
+        gaiadr3.gaia_source.phot_g_mean_mag, 
+        gaiadr3.gaia_source.parallax, 
+        gaiadr2.gaia_source.radius_val 
+    FROM gaiadr3.gaia_source 
+    LEFT JOIN gaiadr2.gaia_source ON gaiadr3.gaia_source.source_id = gaiadr2.gaia_source.source_id
+    WHERE gaiadr3.gaia_source.parallax_error / gaiadr3.gaia_source.parallax < 0.2
+    ORDER BY gaiadr3.gaia_source.phot_g_mean_mag ASC
+    """
 
-    # Query the Hipparcos catalog for stars with specified magnitude
-    hipparcos_data = vizier.query_constraints(catalog=hipparcos_catalog, Vmag=magnitude_limit)
+    job = Gaia.launch_job(query)
+    r = job.get_results()
 
-    # Convert the results to a pandas DataFrame
-    df = hipparcos_data[0].to_pandas()
+    output = []
+    for row in r:
+        distance = np.float32((1000/row[4])*3.26156)
+        azimuth = row[1]*(math.pi/180)
+        elevation = row[2]*(math.pi/180)
 
-    # Function to convert RAhms and DEdms to radians and calculate Cartesian coordinates
-    def convert_to_xyz_brightness(row):
-        ra_h, ra_m, ra_s = map(float, row['RAhms'].split())
-        ra_deg = 15 * (ra_h + ra_m / 60 + ra_s / 3600)
-        ra_rad = np.deg2rad(ra_deg)
+        output.append({
+            'source_id': row[0],
+            'x': np.float64(distance*math.cos(elevation)*math.cos(azimuth)),
+            'y': np.float64(distance*math.cos(elevation)*math.sin(azimuth)),
+            'z': np.float64(distance*math.sin(elevation)),
+            'g_mag': row[3],
+            'dist': distance,
+            'rad': row[4] * 7.35355*(10**-8)
+            })
 
-        de_d, de_m, de_s = map(float, row['DEdms'].split())
-        dec_deg = de_d + de_m / 60 + de_s / 3600
-        dec_rad = np.deg2rad(dec_deg)
+    for i in output:
+        yield i
 
-        if pd.notna(row['Plx']) and row['Plx'] > 0:
-            distance_pc = 1000 / row['Plx']
-            distance_ly = distance_pc * 3.26
-        else:
-            return np.nan, np.nan, np.nan, np.nan  # Skip stars without valid parallax
-
-        # Convert to Cartesian coordinates
-        x = distance_ly * np.cos(dec_rad) * np.cos(ra_rad)
-        y = distance_ly * np.cos(dec_rad) * np.sin(ra_rad)
-        z = distance_ly * np.sin(dec_rad)
-
-        return x, y, z, row['Vmag']  # Return coordinates and brightness
-
-    # Apply the conversion to get XYZ coordinates and brightness
-    df[['x', 'y', 'z', 'Vmag']] = df.apply(lambda row: convert_to_xyz_brightness(row), axis=1, result_type='expand')
-
-    # Filter out stars that have adjusted brightness greater than 6.0 (invisible stars)
-    visible_stars = df[df['Vmag'] < 6.0].dropna(subset=['x', 'y', 'z'])
-
-    # Limit the number of stars returned based on the specified amount
-    return visible_stars[['x', 'y', 'z', 'Vmag']].head(amount).to_dict(orient='records')
+if __name__=="__main__":
+    output = Get_Stars()
+    for i in range(1000):
+        print(next(output))

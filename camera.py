@@ -23,10 +23,10 @@ class Camera:
         self.pitch += yoffset
 
         if constrain_pitch:
-            if self.pitch > 45:
-                self.pitch = 45
-            if self.pitch < -45:
-                self.pitch = -45
+            if self.pitch > 89:
+                self.pitch = 89
+            if self.pitch < -89:
+                self.pitch = -89
 
         self.update_camera_vectors()
 
