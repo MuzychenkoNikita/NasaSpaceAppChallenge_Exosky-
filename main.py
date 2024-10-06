@@ -17,51 +17,55 @@ lastX, lastY = WIDTH / 2, HEIGHT / 2
 first_mouse = True
 left, right, forward, backward = False, False, False, False
 
-# Function to handle keyboard inputs
+# Function to handle keyboard inputs (single definition)
 def key_input_clb(window, key, scancode, action, mode):
     global left, right, forward, backward
-    if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
-        glfw.set_window_should_close(window, True)
-    if key == glfw.KEY_W and action == glfw.PRESS:
-        forward = True
-    elif key == glfw.KEY_W and action == glfw.RELEASE:
-        forward = False
-    if key == glfw.KEY_S and action == glfw.PRESS:
-        backward = True
-    elif key == glfw.KEY_S and action == glfw.RELEASE:
-        backward = False
-    if key == glfw.KEY_A and action == glfw.PRESS:
-        left = True
-    elif key == glfw.KEY_A and action == glfw.RELEASE:
-        left = False
-    if key == glfw.KEY_D and action == glfw.PRESS:
-        right = True
-    elif key == glfw.KEY_D and action == glfw.RELEASE:
-        right = False
+    # Get ImGui IO context
+    io = imgui.get_io()
 
-# Process camera movement
+    # Only process input if ImGui is not capturing the keyboard
+    if not io.want_capture_keyboard:
+        if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
+            glfw.set_window_should_close(window, True)
+        if key == glfw.KEY_W:
+            forward = (action == glfw.PRESS)
+        if key == glfw.KEY_S:
+            backward = (action == glfw.PRESS)
+        if key == glfw.KEY_A:
+            left = (action == glfw.PRESS)
+        if key == glfw.KEY_D:
+            right = (action == glfw.PRESS)
+
+# Process camera movement - poll directly from GLFW instead of relying on global flags
 def do_movement():
-    if forward:
-        cam.process_keyboard("FORWARD", 1.05)
-    if backward:
-        cam.process_keyboard("BACKWARD", 1.05)
-    if left:
-        cam.process_keyboard("LEFT", 1.05)
-    if right:
-        cam.process_keyboard("RIGHT", 1.05)
+    io = imgui.get_io()
+    # Only allow movement if ImGui is not interacting with any input
+    if not (io.want_capture_mouse or io.want_capture_keyboard):
+        if glfw.get_key(window, glfw.KEY_W) == glfw.PRESS:
+            cam.process_keyboard("FORWARD", 1.05)
+        if glfw.get_key(window, glfw.KEY_S) == glfw.PRESS:
+            cam.process_keyboard("BACKWARD", 1.05)
+        if glfw.get_key(window, glfw.KEY_A) == glfw.PRESS:
+            cam.process_keyboard("LEFT", 1.05)
+        if glfw.get_key(window, glfw.KEY_D) == glfw.PRESS:
+            cam.process_keyboard("RIGHT", 1.05)
 
-# Function for mouse look/camera rotation
+# Mouse look callback (for rotation)
 def mouse_look_clb(window, xpos, ypos):
     global first_mouse, lastX, lastY
+    # Process mouse movement regardless of ImGui interaction
     if first_mouse:
         lastX = xpos
         lastY = ypos
         first_mouse = False
+
     xoffset = xpos - lastX
     yoffset = lastY - ypos
     lastX = xpos
     lastY = ypos
+
     cam.process_mouse_movement(xoffset, yoffset)
+
 
 # Function to generate sphere vertices for stars
 def generate_sphere(radius, sectorCount, stackCount):
@@ -140,6 +144,9 @@ glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 # Make the context current
 glfw.make_context_current(window)
 
+glfw.set_key_callback(window, key_input_clb)
+glfw.set_cursor_pos_callback(window, mouse_look_clb)
+
 # Generate sphere data (for stars)
 sphere_vertices, sphere_indices = generate_sphere(0.1, 20, 20)
 
@@ -205,10 +212,6 @@ glUseProgram(shader)
 glClearColor(0, 0.0, 0.05, 1)
 glEnable(GL_DEPTH_TEST)
 
-# Imgui settings
-imgui.create_context()
-imgui_renderer = GlfwRenderer(window)  # Initialize GlfwRenderer for ImGui
-
 # Projection and model matrices
 projection = pyrr.matrix44.create_perspective_projection_matrix(45, WIDTH / HEIGHT, 0.01, 1000000)
 model = pyrr.matrix44.create_from_translation(pyrr.Vector3([0.0, 0.0, -200.0]))
@@ -220,36 +223,52 @@ view_loc = glGetUniformLocation(shader, "view")
 glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
 glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
 
+# Initialize ImGui context
+imgui.create_context()
+imgui_renderer = GlfwRenderer(window)
+
 # Main rendering loop
 last_time = time.time()
 frame_count = 0
+
 while not glfw.window_should_close(window):
+    # Poll events from GLFW (keyboard, mouse)
     glfw.poll_events()
-    do_movement()
 
-    imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 0.0)
-    imgui.core.style_colors_dark()
-    
-    # Ensure correct frame processing with the renderer
-    imgui_renderer.process_inputs()  # Synchronize ImGui with GLFW
+    # Process ImGui inputs
+    imgui_renderer.process_inputs()  # Only call once per loop, after polling events
+
+    # Handle camera movement
+    if not imgui.get_io().want_capture_keyboard:
+        do_movement()  # Only handle movement if ImGui is not capturing the keyboard
+
+    # Handle mouse look
+    if not imgui.get_io().want_capture_mouse:
+        mouse_x, mouse_y = glfw.get_cursor_pos(window)
+        mouse_look_clb(window, mouse_x, mouse_y)  # Ensure ImGui does not interfere
+
+    # Render ImGui interface
     imgui.new_frame()
-    menu.menu()
+    menu.menu()  # Your custom menu rendering
 
+    # Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # Update camera view matrix
     view = cam.get_view_matrix()
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
 
-    # Draw stars as instanced spheres
+    # Draw instanced stars
     glDrawElementsInstanced(GL_TRIANGLES, len(sphere_indices), GL_UNSIGNED_INT, None, len(instance_array) // 3)
 
+    # Render ImGui frame data
     imgui.render()
-    imgui_renderer.render(imgui.get_draw_data())  # Render ImGui content
-    
+    imgui_renderer.render(imgui.get_draw_data())
+
+    # Swap the buffers to display the current frame
     glfw.swap_buffers(window)
 
-    # FPS calculation
+    # FPS calculation and window title update
     current_time = time.time()
     frame_count += 1
     if current_time - last_time >= 1.0:
@@ -258,5 +277,6 @@ while not glfw.window_should_close(window):
         frame_count = 0
         last_time = current_time
 
-imgui_renderer.shutdown()  # Clean up ImGui
+# Shutdown ImGui and terminate GLFW
+imgui_renderer.shutdown()
 glfw.terminate()
