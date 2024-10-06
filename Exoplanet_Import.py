@@ -24,8 +24,6 @@ def Get_Exoplanets(amount = 1000):
             'z': np.float64(distance*math.sin(elevation)),
             'dist': distance,
             }
-        
-    raise StopIteration("Out of planets :P")
 
 if __name__=="__main__":
     output = Get_Exoplanets()
