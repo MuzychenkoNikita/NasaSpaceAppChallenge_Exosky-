@@ -4,6 +4,9 @@ from OpenGL.GL.shaders import compileProgram, compileShader
 import pyrr
 import numpy as np
 import time
+import imgui
+from imgui.integrations.glfw import GlfwRenderer
+import menu
 from camera import Camera
 from Stars_Import import Get_Stars
 
@@ -158,11 +161,9 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere_indices.nbytes, sphere_indices, GL_
 glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
-
 # Process star positions
-number_of_stars = 10000 # Fetch 4000 visible stars
+number_of_stars = 10000
 
-# Process star positions
 instance_array = []
 scale_factor = 1  # Base scale for positioning
 
@@ -204,6 +205,10 @@ glUseProgram(shader)
 glClearColor(0, 0.0, 0.05, 1)
 glEnable(GL_DEPTH_TEST)
 
+# Imgui settings
+imgui.create_context()
+imgui_renderer = GlfwRenderer(window)  # Initialize GlfwRenderer for ImGui
+
 # Projection and model matrices
 projection = pyrr.matrix44.create_perspective_projection_matrix(45, WIDTH / HEIGHT, 0.01, 1000000)
 model = pyrr.matrix44.create_from_translation(pyrr.Vector3([0.0, 0.0, -200.0]))
@@ -222,6 +227,14 @@ while not glfw.window_should_close(window):
     glfw.poll_events()
     do_movement()
 
+    imgui.push_style_var(imgui.STYLE_WINDOW_ROUNDING, 0.0)
+    imgui.core.style_colors_dark()
+    
+    # Ensure correct frame processing with the renderer
+    imgui_renderer.process_inputs()  # Synchronize ImGui with GLFW
+    imgui.new_frame()
+    menu.menu()
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     # Update camera view matrix
@@ -231,6 +244,9 @@ while not glfw.window_should_close(window):
     # Draw stars as instanced spheres
     glDrawElementsInstanced(GL_TRIANGLES, len(sphere_indices), GL_UNSIGNED_INT, None, len(instance_array) // 3)
 
+    imgui.render()
+    imgui_renderer.render(imgui.get_draw_data())  # Render ImGui content
+    
     glfw.swap_buffers(window)
 
     # FPS calculation
@@ -242,4 +258,5 @@ while not glfw.window_should_close(window):
         frame_count = 0
         last_time = current_time
 
+imgui_renderer.shutdown()  # Clean up ImGui
 glfw.terminate()
