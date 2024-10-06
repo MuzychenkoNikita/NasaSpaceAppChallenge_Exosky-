@@ -9,6 +9,7 @@ from imgui.integrations.glfw import GlfwRenderer
 import menu
 from camera import Camera
 from Stars_Import import Get_Stars
+from PIL import Image
 
 # Initialize camera
 cam = Camera()
@@ -22,6 +23,17 @@ show_menu = False
 
 # Variables to store mouse state
 stored_lastX, stored_lastY = lastX, lastY
+
+def ScreenShot(func):
+    glReadBuffer(GL_FRONT)
+    pixels = glReadPixels(0,0,WIDTH,HEIGHT,GL_RGB,GL_UNSIGNED_BYTE)
+    image = Image.frombytes("RGB", (WIDTH, HEIGHT), pixels)
+    image = image.transpose( Image.FLIP_TOP_BOTTOM)
+    if func=='save':
+        image.show()
+        image.save('Exosky.jpg')
+    if func=='constellation':
+        pass
 
 # Function to handle keyboard inputs
 def key_input_clb(window, key, scancode, action, mode):
@@ -173,7 +185,7 @@ glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 # Process star positions
-number_of_stars = 10000
+number_of_stars = 4000
 
 instance_array = []
 scale_factor = 1  # Base scale for positioning
@@ -230,15 +242,26 @@ glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
 # Main rendering loop
 last_time = time.time()
 frame_count = 0
+take_screenshot = False
+toggle_menu = False
+take_screenshot = 0
+ss_func=''
 
 while not glfw.window_should_close(window):
+    if take_screenshot == 2:
+        ScreenShot(ss_func)
+        take_screenshot = 0
+
     # Poll events from GLFW (keyboard, mouse)
     glfw.poll_events()
 
     # Directly check if Escape key is pressed to toggle the menu
-    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS or take_screenshot == 1:
         show_menu = not show_menu
-        time.sleep(0.2)  # Add a slight delay to prevent rapid toggling
+        if take_screenshot == 1:
+            take_screenshot = 2
+        if glfw.get_key(window, glfw.KEY_ESCAPE):
+            time.sleep(0.2)  # Add a slight delay to prevent rapid toggling
 
         # Update cursor state and store/restore mouse position
         if show_menu:
@@ -267,9 +290,16 @@ while not glfw.window_should_close(window):
 
     # Render ImGui interface if menu is shown
     imgui.new_frame()
+    photo_trigger = ''
     if show_menu:
-        menu.menu(cam)  # Pass the 'cam' instance here
-        menu.photo_button()
+        menu.menu(cam)  # Your custom menu rendering
+        photo_trigger = menu.photo_button()
+        if photo_trigger == 'Constellation':
+            take_screenshot = 1
+            ss_func = 'constellation'
+        if photo_trigger == 'Screenshot':
+            take_screenshot = 1
+            ss_func = 'save'
 
     # Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
