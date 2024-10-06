@@ -10,6 +10,7 @@ import menu
 from camera import Camera
 from Stars_Import import Get_Stars
 from PIL import Image
+from Constellation_Draw import Constellation
 
 # Initialize camera
 cam = Camera()
@@ -30,10 +31,9 @@ def ScreenShot(func):
     image = Image.frombytes("RGB", (WIDTH, HEIGHT), pixels)
     image = image.transpose( Image.FLIP_TOP_BOTTOM)
     if func=='save':
-        image.show()
         image.save('Exosky.jpg')
     if func=='constellation':
-        pass
+        Constellation(image)
 
 # Function to handle keyboard inputs
 def key_input_clb(window, key, scancode, action, mode):
