@@ -3,14 +3,14 @@ from math import sin, cos, radians
 
 class Camera:
     def __init__(self):
-        self.camera_pos = Vector3([0.0, 0.0, 10.0])
+        self.camera_pos = Vector3([0.0, 0.0, 0.0])
         self.camera_front = Vector3([0.0, 0.0, -1.0])
         self.camera_up = Vector3([0.0, 1.0, 0.0])
         self.camera_right = Vector3([1.0, 0.0, 0.0])
-
         self.mouse_sensitivity = 0.25
         self.jaw = -90
         self.pitch = 0
+        self.last_teleported_planet = None  # Add this line
 
     def get_view_matrix(self):
         return matrix44.create_look_at(self.camera_pos, self.camera_pos + self.camera_front, self.camera_up)

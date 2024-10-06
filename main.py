@@ -292,7 +292,7 @@ while not glfw.window_should_close(window):
     imgui.new_frame()
     photo_trigger = ''
     if show_menu:
-        menu.menu()  # Your custom menu rendering
+        menu.menu(cam)  # Your custom menu rendering
         photo_trigger = menu.photo_button()
         if photo_trigger == 'Constellation':
             take_screenshot = 1
