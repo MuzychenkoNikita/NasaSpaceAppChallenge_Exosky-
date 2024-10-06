@@ -21,6 +21,13 @@ def photo_button():
         "Photo",
         flags=imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_RESIZE
     )
-    imgui.button("click me!", width=100, height=100)
+    if imgui.button("click me!", width=100, height=100) == True:
+        imgui.end()
+        return 'Screenshot'
+    if imgui.button("click me to start making a constellation!", width=100, height=100) == True:
+        imgui.end()
+        return 'Constellation'
 
     imgui.end()
+
+    
