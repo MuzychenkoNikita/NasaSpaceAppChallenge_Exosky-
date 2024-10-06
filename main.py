@@ -268,7 +268,7 @@ while not glfw.window_should_close(window):
     # Render ImGui interface if menu is shown
     imgui.new_frame()
     if show_menu:
-        menu.menu()  # Your custom menu rendering
+        menu.menu(cam)  # Pass the 'cam' instance here
         menu.photo_button()
 
     # Clear buffers
