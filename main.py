@@ -24,12 +24,16 @@ show_menu = False
 # Variables to store mouse state
 stored_lastX, stored_lastY = lastX, lastY
 
-def ScreenShot():
+def ScreenShot(func):
     glReadBuffer(GL_FRONT)
     pixels = glReadPixels(0,0,WIDTH,HEIGHT,GL_RGB,GL_UNSIGNED_BYTE)
     image = Image.frombytes("RGB", (WIDTH, HEIGHT), pixels)
     image = image.transpose( Image.FLIP_TOP_BOTTOM)
-    image.show()
+    if func=='save':
+        image.show()
+        image.save('Exosky.jpg')
+    if func=='constellation':
+        pass
 
 # Function to handle keyboard inputs
 def key_input_clb(window, key, scancode, action, mode):
@@ -240,22 +244,22 @@ last_time = time.time()
 frame_count = 0
 take_screenshot = False
 toggle_menu = False
-take_screenshot_1 = False
-take_screenshot_2 = False
+take_screenshot = 0
+ss_func=''
 
 while not glfw.window_should_close(window):
-    if take_screenshot_2 == True:
-        ScreenShot()
-    take_screenshot_2 = False
+    if take_screenshot == 2:
+        ScreenShot(ss_func)
+        take_screenshot = 0
 
     # Poll events from GLFW (keyboard, mouse)
     glfw.poll_events()
 
     # Directly check if Escape key is pressed to toggle the menu
-    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS or take_screenshot_1:
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS or take_screenshot == 1:
         show_menu = not show_menu
-        if take_screenshot_1:
-            take_screenshot_1, take_screenshot_2 = False, True
+        if take_screenshot == 1:
+            take_screenshot = 2
         if glfw.get_key(window, glfw.KEY_ESCAPE):
             time.sleep(0.2)  # Add a slight delay to prevent rapid toggling
 
@@ -291,9 +295,11 @@ while not glfw.window_should_close(window):
         menu.menu()  # Your custom menu rendering
         photo_trigger = menu.photo_button()
         if photo_trigger == 'Constellation':
-            take_screenshot_1 = True
+            take_screenshot = 1
+            ss_func = 'constellation'
         if photo_trigger == 'Screenshot':
-            take_screenshot_1 = True
+            take_screenshot = 1
+            ss_func = 'save'
 
     # Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
