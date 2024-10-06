@@ -17,16 +17,21 @@ lastX, lastY = WIDTH / 2, HEIGHT / 2
 first_mouse = True
 left, right, forward, backward = False, False, False, False
 
-# Function to handle keyboard inputs (single definition)
+# Flag to track menu visibility
+show_menu = False
+
+# Variables to store mouse state
+stored_lastX, stored_lastY = lastX, lastY
+
+# Function to handle keyboard inputs
 def key_input_clb(window, key, scancode, action, mode):
     global left, right, forward, backward
+    
     # Get ImGui IO context
     io = imgui.get_io()
 
     # Only process input if ImGui is not capturing the keyboard
     if not io.want_capture_keyboard:
-        if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
-            glfw.set_window_should_close(window, True)
         if key == glfw.KEY_W:
             forward = (action == glfw.PRESS)
         if key == glfw.KEY_S:
@@ -53,7 +58,6 @@ def do_movement():
 # Mouse look callback (for rotation)
 def mouse_look_clb(window, xpos, ypos):
     global first_mouse, lastX, lastY
-    # Process mouse movement regardless of ImGui interaction
     if first_mouse:
         lastX = xpos
         lastY = ypos
@@ -65,7 +69,6 @@ def mouse_look_clb(window, xpos, ypos):
     lastY = ypos
 
     cam.process_mouse_movement(xoffset, yoffset)
-
 
 # Function to generate sphere vertices for stars
 def generate_sphere(radius, sectorCount, stackCount):
@@ -135,17 +138,18 @@ if not window:
 # Set window position
 glfw.set_window_pos(window, 400, 200)
 
+# Make the context current
+glfw.make_context_current(window)
+
 # Set callbacks for resizing, mouse input, and keyboard input
 glfw.set_window_size_callback(window, window_resize_clb)
 glfw.set_cursor_pos_callback(window, mouse_look_clb)
 glfw.set_key_callback(window, key_input_clb)
 glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
-# Make the context current
-glfw.make_context_current(window)
-
-glfw.set_key_callback(window, key_input_clb)
-glfw.set_cursor_pos_callback(window, mouse_look_clb)
+# Initialize ImGui context
+imgui.create_context()
+imgui_renderer = GlfwRenderer(window)
 
 # Generate sphere data (for stars)
 sphere_vertices, sphere_indices = generate_sphere(0.1, 20, 20)
@@ -223,10 +227,6 @@ view_loc = glGetUniformLocation(shader, "view")
 glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
 glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
 
-# Initialize ImGui context
-imgui.create_context()
-imgui_renderer = GlfwRenderer(window)
-
 # Main rendering loop
 last_time = time.time()
 frame_count = 0
@@ -235,21 +235,40 @@ while not glfw.window_should_close(window):
     # Poll events from GLFW (keyboard, mouse)
     glfw.poll_events()
 
+    # Directly check if Escape key is pressed to toggle the menu
+    if glfw.get_key(window, glfw.KEY_ESCAPE) == glfw.PRESS:
+        show_menu = not show_menu
+        time.sleep(0.2)  # Add a slight delay to prevent rapid toggling
+
+        # Update cursor state and store/restore mouse position
+        if show_menu:
+            glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_NORMAL)
+            print("Menu shown, cursor released")
+            # Store the last mouse positions when entering the menu
+            stored_lastX, stored_lastY = lastX, lastY
+        else:
+            glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+            print("Menu hidden, cursor locked")
+            # Restore the stored mouse positions when exiting the menu
+            lastX, lastY = stored_lastX, stored_lastY
+            first_mouse = True  # Reset to ensure proper cursor repositioning
+
     # Process ImGui inputs
     imgui_renderer.process_inputs()  # Only call once per loop, after polling events
 
-    # Handle camera movement
-    if not imgui.get_io().want_capture_keyboard:
-        do_movement()  # Only handle movement if ImGui is not capturing the keyboard
+    # Handle camera movement only if menu is not shown
+    if not show_menu:
+        do_movement()
 
-    # Handle mouse look
-    if not imgui.get_io().want_capture_mouse:
+    # Handle mouse look only if menu is not shown
+    if not show_menu:
         mouse_x, mouse_y = glfw.get_cursor_pos(window)
-        mouse_look_clb(window, mouse_x, mouse_y)  # Ensure ImGui does not interfere
+        mouse_look_clb(window, mouse_x, mouse_y)
 
-    # Render ImGui interface
+    # Render ImGui interface if menu is shown
     imgui.new_frame()
-    menu.menu()  # Your custom menu rendering
+    if show_menu:
+        menu.menu()  # Your custom menu rendering
 
     # Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
