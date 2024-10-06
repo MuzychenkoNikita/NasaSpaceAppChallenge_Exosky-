@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="X:\VSCode Rep\Learn-OpenGL-in-python\exosky"
+VIRTUAL_ENV="X:\VSCode Rep\NasaSpaceAppChallenge_Exosky-\exosky"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
