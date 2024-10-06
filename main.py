@@ -269,6 +269,7 @@ while not glfw.window_should_close(window):
     imgui.new_frame()
     if show_menu:
         menu.menu()  # Your custom menu rendering
+        menu.photo_button()
 
     # Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
