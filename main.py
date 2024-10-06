@@ -185,7 +185,7 @@ glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 # Process star positions
-number_of_stars = 4000
+number_of_stars = 1000000
 
 instance_array = []
 scale_factor = 1  # Base scale for positioning
