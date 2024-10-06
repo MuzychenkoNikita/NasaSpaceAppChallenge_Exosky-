@@ -225,7 +225,7 @@ glVertexAttribDivisor(2, 1)  # This line indicates that this attribute is instan
 
 # OpenGL settings
 glUseProgram(shader)
-glClearColor(0, 0.0, 0.05, 1)
+glClearColor(0, 0.0, 0.02, 1)
 glEnable(GL_DEPTH_TEST)
 
 # Projection and model matrices
