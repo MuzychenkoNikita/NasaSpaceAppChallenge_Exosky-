@@ -3,7 +3,7 @@ from math import sin, cos, radians
 
 class Camera:
     def __init__(self):
-        self.camera_pos = Vector3([0.0, 0.0, 0.0])
+        self.camera_pos = Vector3([0.0, 0.0, 10.0])
         self.camera_front = Vector3([0.0, 0.0, -1.0])
         self.camera_up = Vector3([0.0, 1.0, 0.0])
         self.camera_right = Vector3([1.0, 0.0, 0.0])

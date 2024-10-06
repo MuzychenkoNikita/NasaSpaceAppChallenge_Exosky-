@@ -5,7 +5,7 @@ import pyrr
 import numpy as np
 import time
 from camera import Camera
-from Star_Import import Get_Stars  # Import star data from the Hipparcos catalog (filtered and processed)
+from Stars_Import import Get_Stars  # Import star data from the Hipparcos catalog (filtered and processed)
 
 # Initialize camera
 cam = Camera()
@@ -39,13 +39,13 @@ def key_input_clb(window, key, scancode, action, mode):
 # Process camera movement
 def do_movement():
     if forward:
-        cam.process_keyboard("FORWARD", 0.05)
+        cam.process_keyboard("FORWARD", 1.05)
     if backward:
-        cam.process_keyboard("BACKWARD", 0.05)
+        cam.process_keyboard("BACKWARD", 1.05)
     if left:
-        cam.process_keyboard("LEFT", 0.05)
+        cam.process_keyboard("LEFT", 1.05)
     if right:
-        cam.process_keyboard("RIGHT", 0.05)
+        cam.process_keyboard("RIGHT", 1.05)
 
 # Function for mouse look/camera rotation
 def mouse_look_clb(window, xpos, ypos):
@@ -93,11 +93,10 @@ layout(location = 1) in vec3 a_offset;
 uniform mat4 model;
 uniform mat4 projection;
 uniform mat4 view;
-uniform mat4 move;
 void main()
 {
     vec3 final_pos = a_position + a_offset;
-    gl_Position =  projection * view * move * model * vec4(final_pos, 1.0f);
+    gl_Position =  projection * view * model * vec4(final_pos, 1.0f);
 }
 """
 
@@ -139,7 +138,7 @@ glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 glfw.make_context_current(window)
 
 # Generate sphere data (for stars)
-sphere_vertices, sphere_indices = generate_sphere(0.5, 20, 20)
+sphere_vertices, sphere_indices = generate_sphere(0.1, 20, 20)
 
 # Compile shaders
 shader = compileProgram(compileShader(vertex_src, GL_VERTEX_SHADER), compileShader(fragment_src, GL_FRAGMENT_SHADER))
@@ -159,30 +158,51 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere_indices.nbytes, sphere_indices, GL_
 glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
-# Fetch stars data (XYZ coordinates for visible stars)
-stars_output = Get_Stars(amount=4000)  # Fetch 4000 visible stars
+
+# Process star positions
+stars_output = Get_Stars(amount=6000)  # Fetch 4000 visible stars
+
+print(f"Total number of stars fetched: {len(stars_output)}")  # Print star count
 
 # Process star positions
 instance_array = []
-scale_factor = 0.01  # Scale stars' coordinates to fit within the scene
+scale_factor = 1  # Base scale for positioning
+
 for star in stars_output:
+    brightness = star['Vmag']
+    # Scale size inversely based on brightness (brighter stars are larger)
+    size = max(0.01, 0.1 - (brightness / 1))  # Adjust size based on Vmag, ensuring it doesn't go below a minimum size
     translation = pyrr.Vector3([star['x'] * scale_factor, star['y'] * scale_factor, star['z'] * scale_factor])
-    instance_array.append(translation)
-instance_array = np.array(instance_array, np.float32).flatten()
+    instance_array.append((translation, size))  # Store translation and size as a tuple
+
+# Convert to a NumPy array for use in OpenGL
+instance_array = np.array(instance_array, dtype=[('position', np.float32, 3), ('size', np.float32)])
+instance_positions = instance_array['position'].flatten()  # Flatten positions for OpenGL
+instance_sizes = instance_array['size']  # Sizes can be used later in shaders if needed
 
 # Instance VBO
 instanceVBO = glGenBuffers(1)
 glBindBuffer(GL_ARRAY_BUFFER, instanceVBO)
-glBufferData(GL_ARRAY_BUFFER, instance_array.nbytes, instance_array, GL_STATIC_DRAW)
+glBufferData(GL_ARRAY_BUFFER, instance_positions.nbytes, instance_positions, GL_STATIC_DRAW)
 
 # Enable instance attribute for offsets
 glEnableVertexAttribArray(1)
 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
-glVertexAttribDivisor(1, 1)
+glVertexAttribDivisor(1, 1)  # This line indicates that this attribute is instanced
+
+# Optionally, if you need to pass sizes to the shader
+sizeVBO = glGenBuffers(1)
+glBindBuffer(GL_ARRAY_BUFFER, sizeVBO)
+glBufferData(GL_ARRAY_BUFFER, instance_sizes.nbytes, instance_sizes, GL_STATIC_DRAW)
+
+# Enable vertex attribute for sizes
+glEnableVertexAttribArray(2)  # Assuming the size is at location 2 in the shader
+glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
+glVertexAttribDivisor(2, 1)  # This line indicates that this attribute is instanced
 
 # OpenGL settings
 glUseProgram(shader)
-glClearColor(0, 0.1, 0.1, 1)
+glClearColor(0, 0.0, 0.05, 1)
 glEnable(GL_DEPTH_TEST)
 
 # Projection and model matrices
@@ -192,7 +212,6 @@ model = pyrr.matrix44.create_from_translation(pyrr.Vector3([0.0, 0.0, -200.0]))
 model_loc = glGetUniformLocation(shader, "model")
 proj_loc = glGetUniformLocation(shader, "projection")
 view_loc = glGetUniformLocation(shader, "view")
-move_loc = glGetUniformLocation(shader, "move")
 
 glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
 glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
