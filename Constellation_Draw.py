@@ -47,6 +47,10 @@ def Constellation(image):
     global line
     line = []
 
+    def clear_line(event):
+        global line
+        line = []
+
     def on_click(event):
         global line
         if len(line) == 2:
@@ -75,6 +79,7 @@ def Constellation(image):
 
     canvas.bind("<Button-1>", on_click) 
     root.bind("<Key-c>", clear_canvas)
+    root.bind("<Key-r>", clear_line)
 
     root.mainloop()
 
