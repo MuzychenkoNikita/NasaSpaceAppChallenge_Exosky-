@@ -185,7 +185,7 @@ glEnableVertexAttribArray(0)
 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 
 # Process star positions
-number_of_stars = 4000
+number_of_stars = 100000
 
 instance_array = []
 scale_factor = 1  # Base scale for positioning
@@ -213,7 +213,7 @@ glEnableVertexAttribArray(1)
 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, ctypes.c_void_p(0))
 glVertexAttribDivisor(1, 1)  # This line indicates that this attribute is instanced
 
-# Optionally, if you need to pass sizes to the shader
+# if you need to pass sizes to the shader
 sizeVBO = glGenBuffers(1)
 glBindBuffer(GL_ARRAY_BUFFER, sizeVBO)
 glBufferData(GL_ARRAY_BUFFER, instance_sizes.nbytes, instance_sizes, GL_STATIC_DRAW)
